@@ -4,7 +4,7 @@ import axios from 'axios';
 // API configuration
 const API_KEY = "b10f61721e15eac21e1134db27c0403e";
 const BASE_URL = "https://api.openweathermap.org/data/2.5";
-const MAX_RETRIES = 3;
+export const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000;
 
 /**
@@ -40,6 +40,8 @@ const useWeatherData = () => {
   const [weatherData, setWeatherData] = useState<Map<string, WeatherData>>(new Map());
   const [forecastData, setForecastData] = useState<Map<string, ForecastData[]>>(new Map());
   const [error, setError] = useState<string | null>(null);
+  const [retryingCity, setRetryingCity] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
 
   /**
    * Retry a function with exponential backoff
@@ -47,16 +49,32 @@ const useWeatherData = () => {
    * @param retries Current retry count
    * @returns Promise with the function result
    */
-  const retryWithDelay = async (fn: () => Promise<any>, retries: number = 0): Promise<any> => {
+  const retryWithDelay = async (fn: () => Promise<any>, retries: number = 0, cityName: string = ""): Promise<any> => {
     try {
-      return await fn();
+      setRetryCount(retries);
+      if (retries > 0) {
+        setRetryingCity(cityName);
+      }
+      
+      const result = await fn();
+      
+      if (retries > 0) {
+        setRetryingCity(null);
+        setRetryCount(0);
+      }
+      
+      return result;
     } catch (error) {
       if (retries < MAX_RETRIES) {
         // Calculate exponential backoff delay
         const delay = INITIAL_RETRY_DELAY * Math.pow(2, retries);
+        setRetryingCity(cityName);
+        setRetryCount(retries + 1);
         await new Promise(resolve => setTimeout(resolve, delay));
-        return retryWithDelay(fn, retries + 1);
+        return retryWithDelay(fn, retries + 1, cityName);
       }
+      setRetryingCity(null);
+      setRetryCount(0);
       throw error;
     }
   };
@@ -77,7 +95,7 @@ const useWeatherData = () => {
       // Fetch current weather with retry
       const weatherResponse = await retryWithDelay(() => 
         axios.get(`${BASE_URL}/weather?q=${cityName}&appid=${API_KEY}&units=metric`)
-      );
+      , 0, cityName);
       
       // Process weather data
       const data = weatherResponse.data;
@@ -95,7 +113,7 @@ const useWeatherData = () => {
       // Fetch forecast with retry
       const forecastResponse = await retryWithDelay(() => 
         axios.get(`${BASE_URL}/forecast?q=${cityName}&appid=${API_KEY}&units=metric`)
-      );
+      , 0, cityName);
       
       // Process forecast data - get one forecast per day
       const processedForecast = forecastResponse.data.list
@@ -146,6 +164,8 @@ const useWeatherData = () => {
     forecastData,
     error,
     isLoading,
+    retryingCity,
+    retryCount,
     prefetchWeatherData,
     validateCityName,
     fetchWeatherData

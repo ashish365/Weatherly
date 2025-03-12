@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import useLocalStorage from "../hooks/useLocalStorage";
-import useWeatherData, { ForecastData } from "../hooks/useWeatherData";
+import useWeatherData, {
+  ForecastData,
+  MAX_RETRIES,
+} from "../hooks/useWeatherData";
 import { Map, Marker } from "pigeon-maps";
 import useCityCoords from "../hooks/useCityCoords";
 import { ErrorFallback } from "./ErrorFallback";
@@ -209,6 +212,8 @@ const WeatherDashboard: React.FC = () => {
     forecastData,
     error: weatherError,
     fetchWeatherData,
+    retryingCity,
+    retryCount,
   } = useWeatherData();
   const { selectedCity, error: coordsError, fetchCityCoords } = useCityCoords();
   const [loadingStates, setLoadingStates] = useState<{
@@ -296,6 +301,9 @@ const WeatherDashboard: React.FC = () => {
     if (isValid) {
       const cityId = `${cityName}-${Date.now()}`;
       setCities([...cities, { id: cityId, name: cityName }]);
+
+      // Show the map for the newly added city
+      await fetchCityCoords(cityName);
     }
   };
 
@@ -308,7 +316,9 @@ const WeatherDashboard: React.FC = () => {
     }
   };
 
-  const handleRemoveCity = (cityId: string) => {
+  const handleRemoveCity = (cityId: string, e: React.MouseEvent) => {
+    // Stop the event from propagating to the parent card
+    e.stopPropagation();
     setCities(cities.filter((city) => city.id !== cityId));
   };
 
@@ -342,6 +352,34 @@ const WeatherDashboard: React.FC = () => {
           <ErrorFallback
             error={weatherError || coordsError || duplicateError}
           />
+        )}
+        {retryingCity && (
+          <div
+            style={{
+              color: "#ff9800",
+              backgroundColor: "#fff3e0",
+              padding: "10px",
+              borderRadius: "4px",
+              margin: "10px 0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+            }}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                animation: "spin 1s linear infinite",
+              }}
+            >
+              ⟳
+            </span>
+            <span>
+              Retrying API request for {retryingCity} (Attempt {retryCount}/
+              {MAX_RETRIES})
+            </span>
+          </div>
         )}
       </HeaderSection>
 
@@ -377,7 +415,7 @@ const WeatherDashboard: React.FC = () => {
               onDrop={(e) => handleDrop(e, city.id)}
               onClick={() => handleCityClick(city.name)}
             >
-              <button onClick={() => handleRemoveCity(city.id)}>×</button>
+              <button onClick={(e) => handleRemoveCity(city.id, e)}>×</button>
               <h2>{city.name}</h2>
 
               {weather && (
