@@ -34,7 +34,7 @@ A responsive React application that allows users to track weather conditions acr
 1. Clone the repository:
 
    ```
-   git clone https://github.com/yourusername/weather-dashboard.git
+   git clone https://github.com/yourusername/Weatherly.git
    cd weather-dashboard
    ```
 
