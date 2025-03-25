@@ -109,3 +109,9 @@ yarn build
 ```
 
 This creates an optimized production build in the `build` folder that can be deployed to any static hosting service like Netlify, Vercel, or GitHub Pages.
+
+### Run the container locally:
+
+```
+docker run -p 8080:80 weather-dashboard:latest
+```

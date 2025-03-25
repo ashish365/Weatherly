@@ -2,7 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 
 // API configuration
-const API_KEY = "b10f61721e15eac21e1134db27c0403e";
+const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY || "b10f61721e15eac21e1134db27c0403e";
 const BASE_URL = "https://api.openweathermap.org/data/2.5";
 export const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000;
